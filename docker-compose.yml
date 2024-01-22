@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: awesome
+      POSTGRES_PASSWORD: awesome
+      POSTGRES_DB: awesome
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  migrations:
+    build:
+      context: .
+      dockerfile: migrations.Dockerfile
+    depends_on:
+      - db
+    environment:
+      DB__HOST: ${DB__HOST}
+      DB__PORT: ${DB__PORT}
+      DB__USER: ${DB__USER}
+      DB__PASSWORD: ${DB__PASSWORD}
+      DB__DATABASE: ${DB__DATABASE}
+
+  app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    depends_on:
+      - db
+    environment:
+      PORT: ${PORT}
+      BASE_URL: ${BASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      GOOGLE__CLIENT_ID: ${GOOGLE__CLIENT_ID}
+      GOOGLE__CLIENT_SECRET: ${GOOGLE__CLIENT_SECRET}
+      DB__HOST: ${DB__HOST}
+      DB__PORT: ${DB__PORT}
+      DB__USER: ${DB__USER}
+      DB__PASSWORD: ${DB__PASSWORD}
+      DB__DATABASE: ${DB__DATABASE}
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    environment:
+      APP_PORT: ${PORT}
+      DOMAIN: ${DOMAIN}
+
+volumes:
+  db-data:
