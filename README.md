@@ -8,3 +8,5 @@ What we gonna build on stream
 - Authentication with Google OAuth
 - Serving static files with nginx
 - Containerization application using docker
+
+![Screenshot](screen.png)
