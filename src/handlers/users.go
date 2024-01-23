@@ -6,12 +6,6 @@ import (
 	"net/http"
 )
 
-type UserListData struct {
-	Title       string
-	CurrentUser *models.User
-	Users       []models.User
-}
-
 func (a *App) UserList(w http.ResponseWriter, r *http.Request) {
 	users, err := a.models.UserModel.GetListWithUsername()
 	if err != nil {
@@ -20,13 +14,11 @@ func (a *App) UserList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUser, _ := r.Context().Value("user").(*models.User)
-	_ = renderTemplate(w, "userList", UserListData{Title: "User List", CurrentUser: currentUser, Users: users})
-}
-
-type UserPageData struct {
-	Title       string
-	CurrentUser *models.User
-	User        *models.User
+	a.renderTemplate(w, "userList", map[string]any{
+		"Title":       "User List",
+		"CurrentUser": currentUser,
+		"Users":       users,
+	})
 }
 
 func (a *App) UserPage(w http.ResponseWriter, r *http.Request) {
@@ -44,5 +36,9 @@ func (a *App) UserPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUser, _ := r.Context().Value("user").(*models.User)
-	_ = renderTemplate(w, "userPage", UserPageData{Title: user.Username.String, CurrentUser: currentUser, User: user})
+	a.renderTemplate(w, "userPage", map[string]any{
+		"Title":       user.Username.String,
+		"CurrentUser": currentUser,
+		"User":        user,
+	})
 }

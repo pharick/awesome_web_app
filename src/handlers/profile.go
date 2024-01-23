@@ -5,11 +5,6 @@ import (
 	"net/http"
 )
 
-type ProfileData struct {
-	Title       string
-	CurrentUser *models.User
-}
-
 type ProfileForm struct {
 	Username string
 }
@@ -38,5 +33,8 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_ = renderTemplate(w, "profile", ProfileData{Title: "Your Profile", CurrentUser: currentUser})
+	a.renderTemplate(w, "profile", map[string]any{
+		"Title":       "Your Profile",
+		"CurrentUser": currentUser,
+	})
 }

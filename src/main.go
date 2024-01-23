@@ -4,10 +4,7 @@ import (
 	"awesome_web_app/db"
 	"awesome_web_app/handlers"
 	"awesome_web_app/settings"
-	"fmt"
-	"github.com/gorilla/mux"
 	"log"
-	"net/http"
 )
 
 func main() {
@@ -27,22 +24,17 @@ func main() {
 	app := handlers.NewApp(config, dbConn)
 
 	// configure handlers
-	r := mux.NewRouter().StrictSlash(true)
-	r.HandleFunc("/", app.AuthMiddleware(app.IndexPage))
+	app.AddHandler("/", app.AuthMiddleware(app.IndexPage), "index")
 
-	r.HandleFunc("/auth/login/", app.GoogleLogin)
-	r.HandleFunc("/auth/callback/", app.GoogleCallback)
-	r.HandleFunc("/auth/logout/", app.Logout)
+	app.AddHandler("/auth/login/", app.GoogleLogin, "login")
+	app.AddHandler("/auth/logout/", app.Logout, "logout")
+	app.AddHandler("/auth/callback/", app.GoogleCallback, "auth_callback")
 
-	r.HandleFunc("/profile/", app.AuthRequiredMiddleware(app.Profile))
+	app.AddHandler("/profile/", app.AuthRequiredMiddleware(app.Profile), "profile")
 
-	r.HandleFunc("/users/", app.AuthRequiredMiddleware(app.UserList))
-	r.HandleFunc("/users/{username}/", app.AuthRequiredMiddleware(app.UserPage))
+	app.AddHandler("/users/", app.AuthRequiredMiddleware(app.UserList), "user_list")
+	app.AddHandler("/users/{username}/", app.AuthRequiredMiddleware(app.UserPage), "user_page")
 
 	// start server
-	log.Printf("Starting server on :%v\n", config.Port)
-	err = http.ListenAndServe(fmt.Sprintf(":%v", config.Port), r)
-	if err != nil {
-		log.Fatalf("Could not start server: %v\n", err)
-	}
+	app.Serve()
 }
