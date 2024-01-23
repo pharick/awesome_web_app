@@ -1,0 +1,29 @@
+{{define "user_section"}}
+
+<section class="flex">
+    {{if .}}
+        <p class="border-r p-1 border-emerald-600">
+            Hello, {{if .Username.Valid}}{{.Username.Value}}{{else}}dear user{{end}}!
+        </p>
+        <a
+            class="border-r p-1 border-emerald-600 underline hover:bg-emerald-600 hover:text-white hover:no-underline transition"
+            href="/profile/"
+        >
+            Profile
+        </a>
+        <form action="/auth/logout/" method="post">
+            <button
+                class="p-1 underline hover:bg-emerald-600 hover:text-white hover:no-underline transition"
+                type="submit"
+            >
+                Logout
+            </button>
+        </form>
+    {{else}}
+        <a href="/auth/login/">
+            <img src="/static/google_signin_button.svg" alt="Sign in with Google">
+        </a>
+    {{end}}
+</section>
+
+{{end}}
