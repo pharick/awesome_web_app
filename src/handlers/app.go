@@ -5,6 +5,7 @@ import (
 	"awesome_web_app/settings"
 	"database/sql"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -28,6 +29,7 @@ type App struct {
 	googleOAuthConfig *oauth2.Config
 	sessions          *sessions.CookieStore
 	formDecoder       *schema.Decoder
+	validator         *validator.Validate
 }
 
 func NewApp(settings *settings.Settings, db *sql.DB) *App {
@@ -46,6 +48,7 @@ func NewApp(settings *settings.Settings, db *sql.DB) *App {
 		},
 		sessions:    sessions.NewCookieStore([]byte(settings.SessionSecret)),
 		formDecoder: schema.NewDecoder(),
+		validator:   validator.New(),
 	}
 }
 
@@ -58,7 +61,7 @@ func (a *App) Serve() {
 	csrfMiddleware := csrf.Protect([]byte(a.settings.CSRFSecret), csrf.Secure(false)) // TODO: Set Secure to true
 	err := http.ListenAndServe(
 		fmt.Sprintf(":%v", a.settings.Port),
-		csrfMiddleware(a.ParseFormMiddleware(a.router)),
+		csrfMiddleware(a.router),
 	)
 	if err != nil {
 		log.Fatalf("Could not start server: %v\n", err)
@@ -83,7 +86,13 @@ func (a *App) URLGenerator() func(string, ...string) string {
 	}
 }
 
-func (a *App) renderTemplate(w http.ResponseWriter, tmpl string, data map[string]any) {
+func (a *App) renderTemplate(
+	w http.ResponseWriter,
+	r *http.Request,
+	tmpl string,
+	title string,
+	data map[string]any,
+) {
 	// TODO: Cache templates
 	templates, err := filepath.Glob("templates/partials/*.html")
 	if err != nil {
@@ -92,7 +101,14 @@ func (a *App) renderTemplate(w http.ResponseWriter, tmpl string, data map[string
 	templates = append(templates, "templates/layout.html")
 	templates = append(templates, "templates/"+tmpl+".html")
 
+	data["Title"] = title
 	data["URL"] = a.URLGenerator()
+	data[csrf.TemplateTag] = csrf.TemplateField(r)
+
+	flashSession, _ := a.sessions.Get(r, "flash")
+	flashes := flashSession.Flashes()
+	_ = flashSession.Save(r, w)
+	data["Flashes"] = flashes
 
 	t, err := template.ParseFiles(templates...)
 	if err != nil {
@@ -104,15 +120,30 @@ func (a *App) renderTemplate(w http.ResponseWriter, tmpl string, data map[string
 	}
 }
 
-func (a *App) ParseFormMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			err := r.ParseForm()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-			r.PostForm.Del("gorilla.csrf.Token") // TODO: get name from settings
+func (a *App) ParseForm(r *http.Request, dst any) error {
+	err := r.ParseForm()
+	if err != nil {
+		return err
+	}
+	r.PostForm.Del("gorilla.csrf.Token") // TODO: get name from settings
+
+	err = a.formDecoder.Decode(dst, r.PostForm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *App) ValidateForm(dst any, w http.ResponseWriter, r *http.Request) error {
+	err := a.validator.Struct(dst)
+	if err != nil {
+		session, _ := a.sessions.Get(r, "flash")
+		for _, fieldError := range err.(validator.ValidationErrors) {
+			session.AddFlash(fieldError.Error()) // TODO: translate validation errors
 		}
-		next.ServeHTTP(w, r)
-	})
+		_ = session.Save(r, w)
+		return err
+	}
+	return nil
 }

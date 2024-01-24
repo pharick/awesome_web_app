@@ -14,8 +14,7 @@ func (a *App) UserList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUser, _ := r.Context().Value("user").(*models.User)
-	a.renderTemplate(w, "userList", map[string]any{
-		"Title":       "User List",
+	a.renderTemplate(w, r, "userList", "User List", map[string]any{
 		"CurrentUser": currentUser,
 		"Users":       users,
 	})
@@ -36,8 +35,7 @@ func (a *App) UserPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUser, _ := r.Context().Value("user").(*models.User)
-	a.renderTemplate(w, "userPage", map[string]any{
-		"Title":       user.Username.String,
+	a.renderTemplate(w, r, "userPage", user.Username.String, map[string]any{
 		"CurrentUser": currentUser,
 		"User":        user,
 	})

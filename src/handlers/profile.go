@@ -2,12 +2,11 @@ package handlers
 
 import (
 	"awesome_web_app/models"
-	"github.com/gorilla/csrf"
 	"net/http"
 )
 
 type ProfileForm struct {
-	Username string
+	Username string `validate:"required,min=3,max=40"`
 }
 
 func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
@@ -15,9 +14,15 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var form ProfileForm
-		err := a.formDecoder.Decode(&form, r.PostForm)
+
+		err := a.ParseForm(r, &form)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = a.ValidateForm(&form, w, r)
+		if err != nil {
+			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 			return
 		}
 
@@ -28,9 +33,7 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	a.renderTemplate(w, "profile", map[string]any{
-		"Title":          "Your Profile",
-		"CurrentUser":    currentUser,
-		csrf.TemplateTag: csrf.TemplateField(r),
+	a.renderTemplate(w, r, "profile", "Your Profile", map[string]any{
+		"CurrentUser": currentUser,
 	})
 }
