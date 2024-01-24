@@ -25,6 +25,7 @@ type Settings struct {
 	BaseUrl       string              `koanf:"BASE_URL" validate:"required"`
 	Port          int                 `koanf:"PORT" validate:"required"`
 	SessionSecret string              `koanf:"SESSION_SECRET" validate:"required"`
+	CSRFSecret    string              `koanf:"CSRF_SECRET" validate:"required"`
 	DB            DatabaseSettings    `koanf:"DB" validate:"required"`
 	Google        GoogleOAuthSettings `koanf:"GOOGLE" validate:"required"`
 }

@@ -3,6 +3,8 @@
 <h1 class="text-2xl mb-3 border-b border-blue-600">Your Profile</h1>
 
 <form method="post">
+    {{.csrfField}}
+
     <div class="pb-1 mb-1 border-b border-gray-200">
         <label for="email" class="block">Email</label>
         <input type="email" class="w-full border border-gray-300 p-0.5 bg-gray-200 text-gray-500" id="email" name="email" value="{{.CurrentUser.Email}}" disabled>

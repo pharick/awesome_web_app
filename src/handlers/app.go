@@ -5,6 +5,7 @@ import (
 	"awesome_web_app/settings"
 	"database/sql"
 	"fmt"
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/gorilla/sessions"
@@ -54,7 +55,11 @@ func (a *App) AddHandler(url string, handler http.HandlerFunc, name string) {
 
 func (a *App) Serve() {
 	log.Printf("Starting server on :%v\n", a.settings.Port)
-	err := http.ListenAndServe(fmt.Sprintf(":%v", a.settings.Port), a.router)
+	csrfMiddleware := csrf.Protect([]byte(a.settings.CSRFSecret), csrf.Secure(false)) // TODO: Set Secure to true
+	err := http.ListenAndServe(
+		fmt.Sprintf(":%v", a.settings.Port),
+		csrfMiddleware(a.ParseFormMiddleware(a.router)),
+	)
 	if err != nil {
 		log.Fatalf("Could not start server: %v\n", err)
 	}
@@ -97,4 +102,17 @@ func (a *App) renderTemplate(w http.ResponseWriter, tmpl string, data map[string
 	if err != nil {
 		log.Printf("Error executing template: %v", err)
 	}
+}
+
+func (a *App) ParseFormMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			err := r.ParseForm()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+			r.PostForm.Del("gorilla.csrf.Token") // TODO: get name from settings
+		}
+		next.ServeHTTP(w, r)
+	})
 }
