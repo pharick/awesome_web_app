@@ -14,14 +14,26 @@ func (a *App) Profile(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var form ProfileForm
-
-		err := a.ParseForm(r, &form)
+		validationErrors, err := a.ParseForm(r, &form)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = a.ValidateForm(&form, w, r)
-		if err != nil {
+
+		session, _ := a.sessions.Get(r, "flash")
+
+		if validationErrors != nil {
+			for _, fieldError := range validationErrors {
+				session.AddFlash(fieldError.Error()) // TODO: translate validation errors
+			}
+			_ = session.Save(r, w)
+			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+			return
+		}
+
+		if user, _ := a.models.UserModel.GetByUsername(form.Username); user != nil {
+			session.AddFlash("Username already taken")
+			_ = session.Save(r, w)
 			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 			return
 		}

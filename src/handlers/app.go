@@ -4,6 +4,7 @@ import (
 	"awesome_web_app/models"
 	"awesome_web_app/settings"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/csrf"
@@ -120,30 +121,25 @@ func (a *App) renderTemplate(
 	}
 }
 
-func (a *App) ParseForm(r *http.Request, dst any) error {
+func (a *App) ParseForm(r *http.Request, dst any) (validator.ValidationErrors, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.PostForm.Del("gorilla.csrf.Token") // TODO: get name from settings
 
 	err = a.formDecoder.Decode(dst, r.PostForm)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
-}
-
-func (a *App) ValidateForm(dst any, w http.ResponseWriter, r *http.Request) error {
-	err := a.validator.Struct(dst)
+	err = a.validator.Struct(dst)
 	if err != nil {
-		session, _ := a.sessions.Get(r, "flash")
-		for _, fieldError := range err.(validator.ValidationErrors) {
-			session.AddFlash(fieldError.Error()) // TODO: translate validation errors
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			return validationErrors, nil
 		}
-		_ = session.Save(r, w)
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }

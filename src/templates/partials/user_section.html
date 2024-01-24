@@ -1,8 +1,8 @@
 {{define "user_section"}}
 
 <section class="flex">
-    {{with .CurrentUser}}
-        {{if .}}
+    {{if .CurrentUser}}
+        {{with .CurrentUser}}
             <p class="border-r p-1 border-emerald-600">
                 Hello, {{if .Username.Valid}}{{.Username.Value}}{{else}}dear user{{end}}!
             </p>
@@ -13,6 +13,7 @@
                 Profile
             </a>
             <form action="{{call $.URL "logout"}}" method="post">
+                {{$.csrfField}}
                 <button
                     class="p-1 underline hover:bg-emerald-600 hover:text-white hover:no-underline transition"
                     type="submit"
@@ -20,11 +21,11 @@
                     Logout
                 </button>
             </form>
-        {{else}}
-            <a href="{{call $.URL "login"}}">
-                <img src="/static/google_signin_button.svg" alt="Sign in with Google">
-            </a>
         {{end}}
+    {{else}}
+        <a href="{{call .URL "login"}}">
+            <img src="/static/google_signin_button.svg" alt="Sign in with Google">
+        </a>
     {{end}}
 </section>
 
