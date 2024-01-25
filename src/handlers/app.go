@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/csrf"
 	gorillaHandlers "github.com/gorilla/handlers"
@@ -25,13 +26,14 @@ type Models struct {
 }
 
 type App struct {
-	settings          *settings.Settings
-	models            *Models
-	router            *mux.Router
-	googleOAuthConfig *oauth2.Config
-	sessions          *sessions.CookieStore
-	formDecoder       *schema.Decoder
-	validator         *validator.Validate
+	settings                   *settings.Settings
+	models                     *Models
+	router                     *mux.Router
+	googleOAuthConfig          *oauth2.Config
+	sessions                   *sessions.CookieStore
+	formDecoder                *schema.Decoder
+	validator                  *validator.Validate
+	validationErrorsTranslator *ut.Translator
 }
 
 func NewApp(settings *settings.Settings, db *sql.DB) *App {
@@ -124,7 +126,13 @@ func (a *App) renderTemplate(
 	}
 }
 
-func (a *App) parseForm(r *http.Request, dst any) (validator.ValidationErrors, error) {
+var validationErrorMessages = map[string]string{
+	"required": "Field %s is required.",
+	"min":      "Field %s must have at least %s characters.",
+	"max":      "Field %s must have at most %s characters.",
+}
+
+func (a *App) parseForm(r *http.Request, dst any) ([]string, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, err
@@ -140,7 +148,24 @@ func (a *App) parseForm(r *http.Request, dst any) (validator.ValidationErrors, e
 	if err != nil {
 		var validationErrors validator.ValidationErrors
 		if errors.As(err, &validationErrors) {
-			return validationErrors, nil
+			var errorMessages []string
+			for _, fieldError := range validationErrors {
+				var errorMessage string
+				if fieldError.Param() != "" {
+					errorMessage = fmt.Sprintf(
+						validationErrorMessages[fieldError.Tag()],
+						fieldError.Field(),
+						fieldError.Param(),
+					)
+				} else {
+					errorMessage = fmt.Sprintf(
+						validationErrorMessages[fieldError.Tag()],
+						fieldError.Field(),
+					)
+				}
+				errorMessages = append(errorMessages, errorMessage)
+			}
+			return errorMessages, nil
 		}
 		return nil, err
 	}
