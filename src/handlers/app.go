@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/csrf"
+	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/gorilla/sessions"
@@ -53,8 +54,12 @@ func NewApp(settings *settings.Settings, db *sql.DB) *App {
 	}
 }
 
-func (a *App) AddHandler(url string, name string, handler http.Handler) {
-	a.router.Handle(url, handler).Name(name)
+func (a *App) AddHandler(url string, name string, handlers map[string]http.HandlerFunc) {
+	convertedHandlers := make(map[string]http.Handler)
+	for method, handlerFunc := range handlers {
+		convertedHandlers[method] = handlerFunc
+	}
+	a.router.Handle(url, gorillaHandlers.MethodHandler(convertedHandlers)).Name(name)
 }
 
 func (a *App) Serve() {

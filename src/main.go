@@ -4,7 +4,6 @@ import (
 	"awesome_web_app/db"
 	"awesome_web_app/handlers"
 	"awesome_web_app/settings"
-	gorillaHandlers "github.com/gorilla/handlers"
 	"log"
 	"net/http"
 )
@@ -26,29 +25,29 @@ func main() {
 	app := handlers.NewApp(config, dbConn)
 
 	// configure handlers
-	app.AddHandler("/", "index", &gorillaHandlers.MethodHandler{
+	app.AddHandler("/", "index", map[string]http.HandlerFunc{
 		"GET": app.AuthMiddleware(app.IndexPage),
 	})
 
-	app.AddHandler("/auth/login/", "login", &gorillaHandlers.MethodHandler{
-		"GET": http.HandlerFunc(app.GoogleLogin),
+	app.AddHandler("/auth/login/", "login", map[string]http.HandlerFunc{
+		"GET": app.GoogleLogin,
 	})
-	app.AddHandler("/auth/logout/", "logout", &gorillaHandlers.MethodHandler{
-		"POST": http.HandlerFunc(app.Logout),
+	app.AddHandler("/auth/logout/", "logout", map[string]http.HandlerFunc{
+		"POST": app.Logout,
 	})
-	app.AddHandler("/auth/callback/", "authCallback", &gorillaHandlers.MethodHandler{
-		"GET": http.HandlerFunc(app.GoogleCallback),
+	app.AddHandler("/auth/callback/", "authCallback", map[string]http.HandlerFunc{
+		"GET": app.GoogleCallback,
 	})
 
-	app.AddHandler("/profile/", "profile", &gorillaHandlers.MethodHandler{
+	app.AddHandler("/profile/", "profile", map[string]http.HandlerFunc{
 		"GET":  app.AuthRequiredMiddleware(app.ProfilePage),
 		"POST": app.AuthRequiredMiddleware(app.HandleProfileForm),
 	})
 
-	app.AddHandler("/users/", "userList", &gorillaHandlers.MethodHandler{
+	app.AddHandler("/users/", "userList", map[string]http.HandlerFunc{
 		"GET": app.AuthRequiredMiddleware(app.UserList),
 	})
-	app.AddHandler("/users/{username}/", "userPage", &gorillaHandlers.MethodHandler{
+	app.AddHandler("/users/{username}/", "userPage", map[string]http.HandlerFunc{
 		"GET": app.AuthRequiredMiddleware(app.UserPage),
 	})
 

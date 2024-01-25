@@ -18,6 +18,8 @@ type ProfileForm struct {
 }
 
 func (a *App) HandleProfileForm(w http.ResponseWriter, r *http.Request) {
+	currentUser, _ := r.Context().Value("user").(*models.User)
+
 	var form ProfileForm
 	validationErrors, err := a.parseForm(r, &form)
 	if err != nil {
@@ -34,14 +36,18 @@ func (a *App) HandleProfileForm(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 		return
 	}
-	if user, _ := a.models.UserModel.GetByUsername(form.Username); user != nil {
+	user, _ := a.models.UserModel.GetByUsername(form.Username)
+	if user.Id == currentUser.Id {
+		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+		return
+	}
+	if user != nil {
 		session.AddFlash("Username already taken")
 		_ = session.Save(r, w)
 		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 		return
 	}
 
-	currentUser, _ := r.Context().Value("user").(*models.User)
 	currentUser, err = a.models.UserModel.Update(currentUser.Id, form.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
