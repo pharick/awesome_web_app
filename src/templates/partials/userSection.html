@@ -1,4 +1,4 @@
-{{define "user_section"}}
+{{define "userSection"}}
 
 <section class="flex">
     {{if .CurrentUser}}
@@ -24,7 +24,7 @@
         {{end}}
     {{else}}
         <a href="{{call .URL "login"}}">
-            <img src="/static/google_signin_button.svg" alt="Sign in with Google">
+            <img src="/static/googleSigninButton.svg" alt="Sign in with Google">
         </a>
     {{end}}
 </section>

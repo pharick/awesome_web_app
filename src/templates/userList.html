@@ -4,7 +4,7 @@
 <ul>
     {{range .Users}}
         <li>
-            <a href="{{call $.URL "user_page" "username" .Username.Value}}">
+            <a href="{{call $.URL "userPage" "username" .Username.Value}}">
                 <article class="border-b border-gray-200 p-2 hover:shadow">
                     <h2 class="text-xl">{{.Username.Value}}</h2>
                     <p class="text-gray-500">{{.Email}}</p>

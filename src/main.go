@@ -4,7 +4,9 @@ import (
 	"awesome_web_app/db"
 	"awesome_web_app/handlers"
 	"awesome_web_app/settings"
+	gorillaHandlers "github.com/gorilla/handlers"
 	"log"
+	"net/http"
 )
 
 func main() {
@@ -24,16 +26,31 @@ func main() {
 	app := handlers.NewApp(config, dbConn)
 
 	// configure handlers
-	app.AddHandler("/", app.AuthMiddleware(app.IndexPage), "index")
+	app.AddHandler("/", "index", &gorillaHandlers.MethodHandler{
+		"GET": app.AuthMiddleware(app.IndexPage),
+	})
 
-	app.AddHandler("/auth/login/", app.GoogleLogin, "login")
-	app.AddHandler("/auth/logout/", app.Logout, "logout")
-	app.AddHandler("/auth/callback/", app.GoogleCallback, "auth_callback")
+	app.AddHandler("/auth/login/", "login", &gorillaHandlers.MethodHandler{
+		"GET": http.HandlerFunc(app.GoogleLogin),
+	})
+	app.AddHandler("/auth/logout/", "logout", &gorillaHandlers.MethodHandler{
+		"POST": http.HandlerFunc(app.Logout),
+	})
+	app.AddHandler("/auth/callback/", "authCallback", &gorillaHandlers.MethodHandler{
+		"GET": http.HandlerFunc(app.GoogleCallback),
+	})
 
-	app.AddHandler("/profile/", app.AuthRequiredMiddleware(app.Profile), "profile")
+	app.AddHandler("/profile/", "profile", &gorillaHandlers.MethodHandler{
+		"GET":  app.AuthRequiredMiddleware(app.ProfilePage),
+		"POST": app.AuthRequiredMiddleware(app.HandleProfileForm),
+	})
 
-	app.AddHandler("/users/", app.AuthRequiredMiddleware(app.UserList), "user_list")
-	app.AddHandler("/users/{username}/", app.AuthRequiredMiddleware(app.UserPage), "user_page")
+	app.AddHandler("/users/", "userList", &gorillaHandlers.MethodHandler{
+		"GET": app.AuthRequiredMiddleware(app.UserList),
+	})
+	app.AddHandler("/users/{username}/", "userPage", &gorillaHandlers.MethodHandler{
+		"GET": app.AuthRequiredMiddleware(app.UserPage),
+	})
 
 	// start server
 	app.Serve()

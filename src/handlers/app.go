@@ -53,13 +53,13 @@ func NewApp(settings *settings.Settings, db *sql.DB) *App {
 	}
 }
 
-func (a *App) AddHandler(url string, handler http.HandlerFunc, name string) {
-	a.router.HandleFunc(url, handler).Name(name)
+func (a *App) AddHandler(url string, name string, handler http.Handler) {
+	a.router.Handle(url, handler).Name(name)
 }
 
 func (a *App) Serve() {
 	log.Printf("Starting server on :%v\n", a.settings.Port)
-	csrfMiddleware := csrf.Protect([]byte(a.settings.CSRFSecret), csrf.Secure(false)) // TODO: Set Secure to true
+	csrfMiddleware := csrf.Protect([]byte(a.settings.CSRFSecret), csrf.Secure(false), csrf.Path("/")) // TODO: Set Secure to true
 	err := http.ListenAndServe(
 		fmt.Sprintf(":%v", a.settings.Port),
 		csrfMiddleware(a.router),
@@ -69,22 +69,20 @@ func (a *App) Serve() {
 	}
 }
 
-func (a *App) URLGenerator() func(string, ...string) string {
-	return func(name string, pairs ...string) string {
-		route := a.router.Get(name)
-		if route == nil {
-			log.Printf("Route not found: %s", name)
-			return ""
-		}
-
-		url, err := route.URL(pairs...)
-		if err != nil {
-			log.Printf("Error generating URL for route %s: %v", name, err)
-			return ""
-		}
-
-		return url.String()
+func (a *App) generateUrl(name string, pairs ...string) string {
+	route := a.router.Get(name)
+	if route == nil {
+		log.Printf("Route not found: %s", name)
+		return ""
 	}
+
+	url, err := route.URL(pairs...)
+	if err != nil {
+		log.Printf("Error generating URL for route %s: %v", name, err)
+		return ""
+	}
+
+	return url.String()
 }
 
 func (a *App) renderTemplate(
@@ -103,7 +101,7 @@ func (a *App) renderTemplate(
 	templates = append(templates, "templates/"+tmpl+".html")
 
 	data["Title"] = title
-	data["URL"] = a.URLGenerator()
+	data["URL"] = a.generateUrl
 	data[csrf.TemplateTag] = csrf.TemplateField(r)
 
 	flashSession, _ := a.sessions.Get(r, "flash")
@@ -121,7 +119,7 @@ func (a *App) renderTemplate(
 	}
 }
 
-func (a *App) ParseForm(r *http.Request, dst any) (validator.ValidationErrors, error) {
+func (a *App) parseForm(r *http.Request, dst any) (validator.ValidationErrors, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, err

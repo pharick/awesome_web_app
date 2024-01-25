@@ -35,7 +35,7 @@ func (a *App) AuthRequiredMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return a.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		_, ok := r.Context().Value("user").(*models.User)
 		if !ok {
-			http.Redirect(w, r, "/auth/login/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, a.generateUrl("login"), http.StatusFound)
 			return
 		}
 		next(w, r)
@@ -44,7 +44,7 @@ func (a *App) AuthRequiredMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func (a *App) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	url := a.googleOAuthConfig.AuthCodeURL("state")
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, url, http.StatusFound)
 }
 
 func (a *App) GoogleCallback(w http.ResponseWriter, r *http.Request) {
@@ -82,13 +82,12 @@ func (a *App) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	session.Values["userId"] = user.Id
 	_ = session.Save(r, w)
 
-	http.Redirect(w, r, "/profile/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, a.generateUrl("profile"), http.StatusFound)
 }
 
 func (a *App) Logout(w http.ResponseWriter, r *http.Request) {
 	session, _ := a.sessions.Get(r, "session")
-	delete(session.Values, "userId")
+	session.Options.MaxAge = -1
 	_ = session.Save(r, w)
-
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, a.generateUrl("index"), http.StatusSeeOther)
 }
